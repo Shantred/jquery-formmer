@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+  </head>
+  <body>
+    <form id="form-test">
+      <input id="username" type="text" name="username"><br />
+      <input id="password" type="password" name="password"><br />
+      <button id="button-test" type="submit" data-loadinghtml="Processing">
+        Submit
+      </button>
+    </form>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script type="text/javascript" src="../formmer.js"></script>
+    <script>
+      $(document).ready( function() {
+        $('form').on("submit", function() {
+          $.ajax({
+            url: '../examples/response/json.php',
+            method: 'post',
+            dataType: 'json',
+            success: function(response) {
+              console.log('done 2');
+            }
+          });
+          
+          return false;
+        });
+
+        $("#form-test").formmer({
+          enableOnSuccess: false,
+          watchURL: '../examples/response/json.php'
+        });
+      });
+    </script>
+  </body>
+</html>

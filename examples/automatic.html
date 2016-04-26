@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+  </head>
+  <body>
+    <form action="../examples/response/json.php" class="formmer">
+      <input id="username" type="text" name="username"><br />
+      <input id="password" type="password" name="password"><br />
+      <button id="button-test" type="submit" data-loadinghtml="Processing">
+        Submit
+      </button>
+    </form>
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+    <script type="text/javascript" src="../formmer.js"></script>
+    <script>
+      $(document).on('ready', function() {
+        $('form').on("submit", function() {
+          $.ajax({
+            url: $(this).attr('action'),
+            method: 'post',
+            dataType: 'json',
+            success: function(response) {
+              console.log('done 2');
+            }
+          });
+          
+          return false;
+        });
+
+        // Do some validation first
+        $("#button-test").on("click", function() {
+          if( $("#username").val().length == 0 ) {
+            console.log("Can't do that!");
+            return false;
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
