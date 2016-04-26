@@ -10,6 +10,7 @@
  
     var loadingText = "Please Wait";
     var formmerUrls = [];
+    var references = [];
 
     var pluginName = "formmer",
         defaults = {
@@ -49,13 +50,18 @@
           }
 
           disableSubmission( form );
+
+          // Attempt to access plugin closure
+          references[0].testClosure2();
+          //console.log("What about this?", $(form));
           return false;
         });
       },
       applySettings: function( form ) {
         $(form).addClass('formmer')
               .attr('data-enableonerror', this.settings.enableOnError)
-              .attr('data-enableonsuccess', this.settings.enableOnSuccess);
+              .attr('data-enableonsuccess', this.settings.enableOnSuccess)
+              .attr('data-formmerid', 1);
 
         // If a watchURL was provided, add it to the urls to watch
         if( this.settings.watchURL ) {
@@ -65,13 +71,17 @@
       },
       testClosure: function() {
         console.log("testing closure here");
+      },
+      testClosure2: function() {
+        console.log("Testing new closure");
       }
     });
 
     // A really lightweight plugin wrapper around the constructor, preventing 
     // against multiple instantiations
     $.fn[ pluginName ] = function( options ) {
-      return new Plugin( this, options );
+      references.push( new Plugin( this, options ) );
+      return references[0];
       // console.log(this.each);
       // return this.each( function() {
       //   if( !$.data( this, "plugin_" + pluginName ) ) {
