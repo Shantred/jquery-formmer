@@ -6,64 +6,87 @@
  * automatically enable form submission on error or (optionally) success.
  **/
  
-;(function( $ ) {
+;(function( $, window, document, undefined ) {
  
     var loadingText = "Please Wait";
     var formmerUrls = [];
 
-    // Bind submission events and gather action urls for all formmer enabled forms
-    $.each( $('form.formmer'), function(idx, form) {
-      bindFormSubmission( form );
-    });
+    var pluginName = "formmer",
+        defaults = {
+          enableOnError: true,
+          enableOnSucces: false,
+          watchURL: null,
+          enabledCallback: null,
+          disabledCallback: null
+        };
 
-    // Initiaize plugin
-    $.fn.formmer = function(opts) {
+    function Plugin( element, options ) {
+      this.element = element;
 
-      // Defaults and configuration
-      var options = $.extend({}, {
-        enableOnError: true,
-        enableOnSucces: false,
-        watchURL: null
-      }, opts);
-
-      this.each(function() {
-
-        // Bind to submission of the form
-        bindFormSubmission( $(this) );
-
-        // Add formmer class and data-options to the form based on options provided
-        $(this).addClass('formmer')
-              .attr('data-enableonerror', options.enableOnError)
-              .attr('data-enableonsuccess', options.enableOnSuccess);
-
-        // If a watchURL was provided, add it to the urls to watch
-        if( options.watchURL ) {
-          formmerUrls.push( options.watchURL );
-          $(this).attr('data-watchurl', options.watchURL);
-        }
-        
-      });
+      this.settings = $.extend( {}, defaults, options );
+      this._defaults = defaults;
+      this._name = pluginName,
+      this.init();
 
       return this;
     }
-    
-    function bindFormSubmission(form) {
 
-      if( $(form).attr('action') != null ) {
-        formmerUrls.push( $(form).attr('action') );
-      }
-      
-      $(form).on("submit", function(e) {
-        if( $(form).hasClass('formmer-processing') ) {
-          // Prevents any additionally bound events from firing
-          e.stopImmediatePropagation();
-          return false;
+    $.extend( Plugin.prototype, {
+      init: function() {
+        this.bindFormSubmission( this.element );
+        this.applySettings( this.element );
+      },
+      bindFormSubmission: function( form ) {
+        if( $(form).attr('action') != null ) {
+          formmerUrls.push( $(form).attr('action') );
         }
+        
+        $(form).on("submit", function(e) {
+          if( $(form).hasClass('formmer-processing') ) {
+            // Prevents any additionally bound events from firing
+            e.stopImmediatePropagation();
+            return false;
+          }
 
-        disableSubmission( $(form) );
-        return false;
-      });
+          disableSubmission( form );
+          return false;
+        });
+      },
+      applySettings: function( form ) {
+        $(form).addClass('formmer')
+              .attr('data-enableonerror', this.settings.enableOnError)
+              .attr('data-enableonsuccess', this.settings.enableOnSuccess);
+
+        // If a watchURL was provided, add it to the urls to watch
+        if( this.settings.watchURL ) {
+          formmerUrls.push( this.settings.watchURL );
+          $(form).attr('data-watchurl', this.settings.watchURL);
+        }
+      },
+      testClosure: function() {
+        console.log("testing closure here");
+      }
+    });
+
+    // A really lightweight plugin wrapper around the constructor, preventing 
+    // against multiple instantiations
+    $.fn[ pluginName ] = function( options ) {
+      return new Plugin( this, options );
+      // console.log(this.each);
+      // return this.each( function() {
+      //   if( !$.data( this, "plugin_" + pluginName ) ) {
+      //     $.data( this, "plugin_" +
+      //       pluginName, new Plugin( this, options ) );
+      //   }
+      // });
     };
+
+
+
+    // Automatically apply formmer to every form with class formmer
+    $.each( $('form.formmer'), function(idx, form) {
+      $(form).formmer();
+    });
 
     var enableSubmission = function( form, error ) {
       form.removeClass('formmer-processing');
@@ -173,4 +196,4 @@
         }
       }
     });
-}( jQuery ));
+}( jQuery, window, document ));

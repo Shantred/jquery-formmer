@@ -30,10 +30,12 @@
           return false;
         });
 
-        $("#form-test").formmer({
-          enableOnSuccess: false,
+        var test = $("#form-test").formmer({
+          enableOnSuccess: true,
           watchURL: '../examples/response/json.php'
         });
+        console.log(test);
+        test.testClosure();
       });
     </script>
   </body>
