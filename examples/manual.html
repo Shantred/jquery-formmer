@@ -30,12 +30,15 @@
           return false;
         });
 
+        // Demo needs to be successful and enableOnSuccess has to be true and submission must have success
         var test = $("#form-test").formmer({
-          enableOnSuccess: false,
-          watchURL: '../examples/response/json.php'
+          enableOnSuccess: true,
+          watchURL: '../examples/response/json.php',
+          enabledCallback: function(form, button) {
+            $(button).text( $(button).text() + " butts" );
+          }
         });
-        console.log(test);
-        test.testClosure();
+
       });
     </script>
   </body>
