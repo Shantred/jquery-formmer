@@ -13,255 +13,290 @@
           enableOnError: true,
           enableOnSucces: false,
           watchURL: null,
+          disableFormInputs: false,
+          ignoreAjax: false,
           enabledCallback: null,
           disabledCallback: null,
+          ajaxOnSuccess: null,
+          ajaxOnError: null,
           loadingHTML: "Please Wait"
         };
 
-    function Plugin( element, options ) {
-      this.element = element;
+    function Plugin( element, options, optionalParams ) {
 
+      // This plugin allows direct access to plugin methods if the method name
+      // is passed in as a string for the options param. If not a string, assume
+      // it is an object containing plugin options
+
+      // Always have reference to the intializing object
+      this.element = element;
       this.settings = $.extend( {}, defaults, options );
       this._defaults = defaults;
-      this._name = pluginName,
-      this.init();
+      this._name = pluginName;
 
-      return this;
+      if( typeof(options) === 'string' ) {
+        if( typeof(this[options]) === 'function' ) {
+          this[options](optionalParams);
+        }
+
+      } else {
+        this.init();
+        return this;
+      }
     }
 
     $.extend( Plugin.prototype, {
       init: function() {
+        console.log("Plugin init called on", this);
         this.bindFormSubmission( this.element );
-        this.applySettings( this.element );
+        this.getDataSettings( this.element );
+        this.addDataAttributes( this.element );
       },
       bindFormSubmission: function( form ) {
+
+        // Add selector class and plugin reference id
+        $(form).addClass('formmer')
+               .attr('data-formmerid', ($("[data-formmerid]").length + 1));
+
         if( $(form).attr('action') != null ) {
           formmerUrls.push( $(form).attr('action') );
         }
         
-        $(form).on("submit", function(e) {
+        $(form).on("submit", null, { formmer : this}, function(e) {
           if( $(form).hasClass('formmer-processing') ) {
             // Prevents any additionally bound events from firing
             e.stopImmediatePropagation();
             return false;
           }
 
-          this.disableSubmission();
+          //console.log("this inside the bind", e.data.plugin);
+          e.data.formmer.disableSubmission();
           return false;
         });
       },
-      applySettings: function( form ) {
-        $(form).addClass('formmer')
-              .attr('data-enableonerror', this.settings.enableOnError)
-              .attr('data-enableonsuccess', this.settings.enableOnSuccess)
-              .attr('data-formmerid', ($("[data-formmerid]").length + 1));
+      getDataSettings: function() {
 
-        // If a watchURL was provided, add it to the urls to watch
-        if( this.settings.watchURL ) {
-          //formmerUrls.push( this.settings.watchURL );
-          $(form).attr('data-watchurl', this.settings.watchURL);
+        // We always take data-attribute settings over initialized settings if provided
+        if( this.element[0].hasAttribute('data-enableonsuccess') ) {
+          if( this.element.attr('data-enableonsuccess').toLowerCase() === "true" )
+            this.settings.enableOnSuccess = true;
+        }
+
+        if( this.element[0].hasAttribute('data-enableonerror') ) {
+          if( this.element.attr('data-enableonerror').toLowerCase() === "false" )
+            this.settings.enableOnError = false;
+        }
+
+        if( this.element[0].hasAttribute('data-watchurl') )
+          this.settings.watchURL = this.element.attr('data-watchurl');
+
+        if( this.element[0].hasAttribute('data-ignoreajax') ) {
+          if( this.element.attr('data-ignoreajax').toLowerCase() === "true" )
+            this.settings.ignoreAjax = true;
+        }
+
+        if( this.element[0].hasAttribute('data-disableforminputs') ) {
+          if( this.element.attr('data-disableforminputs').toLowerCase() === "true" )
+            this.settings.disableFormInputs = true;
         }
       },
-      enableSubmission: function( error ) {
-        $(this.element).removeClass('formmer-processing');
+      addDataAttributes: function() {
 
-        var button = $(this.element).find('button[type=submit]');
-        if( button ) {
+        // We read all boolean and string settings from data attributes, so if
+        // they are not already defined, define them. 
+        if( !this.element[0].hasAttribute('data-enableonsuccess') )
+          this.element.attr('data-enableonsuccess', this.settings.enableOnSuccess);
 
-          // Check correct data attr depending on error value
-          if( error ) {
+        if( !this.element[0].hasAttribute('data-enableonerror') )
+          this.element.attr('data-enableonerror', this.settings.enableOnError);
 
-            // By default, buttons should enable after an error
-            if( $(this.element).attr('data-enableonerror') ) {
-              if( $(this.element).attr('data-enableonerror') == "true") {
-                this.enableButton( button );
+        if( !this.element[0].hasAttribute('data-watchurl') && this.settings.watchURL )
+          this.element.attr('data-watchurl', this.settings.watchURL);
+
+        if( !this.element[0].hasAttribute('data-ignoreajax') )
+          this.element.attr('data-ignoreajax', this.settings.ignoreAjax);
+      },
+      enableSubmission: function( isError ) {
+
+        // Check correct data attr depending on error value
+        if( isError ) {
+
+          // By default, buttons should enable after an error
+          if( $(this.element).attr('data-enableonerror') ) {
+            if( $(this.element).attr('data-enableonerror') == "true") {
+
+              // Enable all form inputs if specified
+              if( this.settings.disableFormInputs === true ) {
+                $(this.element).children('input, textarea, select').prop('disabled', false);
               }
-            } else {
-            
-              // Not specified, default to enabled
-              this.enableButton( button );
+
+              $(this.element).removeClass('formmer-processing');
+              this.enableFormButton();
             }
           } else {
+          
+            // Not specified, default to enabled
+            // Enable all form inputs if specified
+            if( this.settings.disableFormInputs === true ) {
+              $(this.element).children('input, textarea, select').prop('disabled', false);
+            }
 
-            // By default, buttons don't enable after success
-            if( $(this.element).attr('data-enableonsuccess') ) {
-              if( $(this.element).attr('data-enableonsuccess') === "true" ) {
-                this.enableButton( button );
-              }
-            } // No else because of defaults
+            $(this.element).removeClass('formmer-processing');
+            this.enableFormButton();
           }
-        }
-      },
-      enableButton: function( button ) {
-        console.log("here we are");
-        button.html( button.attr('data-originalhtml') )
-              .prop('disabled', false)
-              .removeAttr('data-originalhtml');
 
-        if( this.settings.enabledCallback ) {
-          this.settings.enabledCallback.call(this, this.element, button);
+          if( this.settings.ajaxOnError )
+            this.settings.ajaxOnError.call(this);
+
+        } else {
+
+          // By default, buttons don't enable after success
+          if( $(this.element).attr('data-enableonsuccess') ) {
+            if( $(this.element).attr('data-enableonsuccess') === "true" ) {
+
+              // Enable all form inputs if specified
+              if( this.settings.disableFormInputs === true ) {
+                $(this.element).children('input, textarea, select').prop('disabled', false);
+              }
+
+              $(this.element).removeClass('formmer-processing');
+              this.enableFormButton();
+            }
+          } // No else because of defaults
+        
+          if( this.settings.ajaxOnSuccess )
+            this.settings.ajaxOnError.call(this);
+
         }
       },
       disableSubmission: function() {
         $(this.element).addClass('formmer-processing');
 
-        var button = $(this.element).find('button[type=submit]');
-        if( button ) {
-          disableButton( button );
+        // Disable all form inputs if specified
+        if( this.settings.disableFormInputs === true ) {
+          $(this.element).children('input, textarea, select').prop('disabled', true);
         }
+
+        this.disableFormButton();
+      },
+      enableFormButton: function() {
+
+        // Used when disabling a form button, but are not passing the button into
+        // the plugin directly
+        var button = $(this.element).find('button[type=submit]');
+        if( button )
+          this.enableButton( button );
+      },
+      disableFormButton: function() {
+
+        // The converse of the previous method
+        var button = $(this.element).find('button[type=submit]');
+        if( button )
+          this.disableButton( button );
+      },
+      enableButton: function( button ) {
+
+        // This method is called either directly as a plugin method or indirectly
+        // after enableFormButton has obtained a button element
+        button.html( button.attr('data-originalhtml') )
+              .prop('disabled', false)
+              .removeAttr('data-originalhtml');
+
+        if( this.settings.enabledCallback )
+          this.settings.enabledCallback.call(this, this.element, button);
+
       },
       disableButton: function( button ) {
-        // If provided, replace the button text data-loadinghtml
+
+        // Change button html out with loadinghtml if provided or use default
         if( button.attr('data-loadinghtml') ) {
           button.attr('data-originalhtml', button.html())
                 .html( button.attr('data-loadinghtml') )
                 .prop('disabled', true);
         } else {
           button.attr('data-originalhtml', button.html())
-                .html(loadingText)
+                .html(this.settings.loadingHTML)
                 .prop('disabled', true);
         }
+
+        if( this.settings.disabledCallback )
+          this.settings.disabledCallback.call(this, this.element, button);
+
       }
     });
 
-    // A really lightweight plugin wrapper around the constructor, preventing 
-    // against multiple instantiations
-    $.fn[ pluginName ] = function( options ) {
-      
-      $.data( document, pluginName + "-" + ($("[data-formmerid]").length + 1), new Plugin( this, options ) );
-      return $.data(document, pluginName + "-" + + ($("[data-formmerid]").length + 1));
-      // console.log(this.each);
-      // return this.each( function() {
-      //   if( !$.data( this, "plugin_" + pluginName ) ) {
-      //     $.data( this, "plugin_" +
-      //       pluginName, new Plugin( this, options ) );
-      //   }
-      // });
-    };
 
+    $.fn[ pluginName ] = function( options, optionalParams ) {
 
-
-    // Automatically apply formmer to every form with class formmer
-    // $.each( $('form.formmer'), function(idx, form) {
-    //   $(form).formmer();
-    // });
-
-    var enableSubmission = function( form, error ) {
-      form.removeClass('formmer-processing');
-
-      var button = form.find('button[type=submit]');
-      if( button ) {
-
-        // Check correct data attr depending on error value
-        if( error ) {
-
-          // By default, buttons should enable after an error
-          if( form.attr('data-enableonerror') ) {
-            if( form.attr('data-enableonerror') == "true") {
-              enableButton( button );
-            }
-          } else {
-          
-            // Not specified, default to enabled
-            enableButton( button );
-          }
-        } else {
-
-          // By default, buttons don't enable after success
-          if( form.attr('data-enableonsuccess') ) {
-            if( form.attr('data-enableonsuccess') === "true" ) {
-              enableButton( button );
-            }
-          } // No else because of defaults
-        }
-      }
-    };
-
-    var disableSubmission = function( form ) {
-      form.addClass('formmer-processing');
-
-      var button = form.find('button[type=submit]');
-      if( button ) {
-        disableButton( button );
-      }
-    }
-
-    var enableButton = function( button ) {
-      button.html( button.attr('data-originalhtml') )
-            .prop('disabled', false)
-            .removeAttr('data-originalhtml');
-    };
-    
-    var disableButton = function( button ) {
-      // If provided, replace the button text data-loadinghtml
-      if( button.attr('data-loadinghtml') ) {
-        button.attr('data-originalhtml', button.html())
-              .html( button.attr('data-loadinghtml') )
-              .prop('disabled', true);
+      // When options is a string, treat as a direct method call and return plugin
+      // object without storing reference to document
+      if( typeof(options) === 'string' ) {
+        return new Plugin( this, options, optionalParams );
       } else {
-        button.attr('data-originalhtml', button.html())
-              .html(loadingText)
-              .prop('disabled', true);
+        $.data( document, pluginName + "-" + ($("[data-formmerid]").length + 1), new Plugin( this, options ) );
+        return $.data(document, pluginName + "-" + + ($("[data-formmerid]").length + 1));
       }
     };
 
-    // Ajax prefilter that attaches our button control functions to outgoing ajax
-    // requests if they are submissions to known forms
+    // Automatically apply formmer to every form with class formmer that isn't
+    // already an instance of the plugin
+    $.each( $('form.formmer:not([data-formmerid])'), function(idx, form) {
+      $(form).formmer();
+    });
+
+    // Ajax prefilter that communicates with plugin instances to enable and disable
+    // form/button controls.
     $.ajaxPrefilter( function( options, originalOptions, jqXHR) {
 
-      // Attempt to get a form with the watched url first. If this fails, get the
-      // form by it's data-watchurl property
-      var form = $("form.formmer[data-watchurl='" + options.url + "']");
+      // console.log("options:", options);
+      // console.log("originalOptions:", originalOptions);
+      // console.log("jaXHR:", jqXHR);
+
+      // To prevent issues if the action attribute is used for something else,
+      // look for the watch url first and use action url as backup
+      var form = $("form.formmer[data-watchurl='" + options.url + "'][data-ignoreajax=false]");
 
       if( form.length === 0 ) {
-        form = $("form.formmer[action='" + options.url + "']");
+        form = $("form.formmer[action='" + options.url + "'][data-ignoreajax=false]");
       }
 
-      // If form was found, get plugin instance and attach success and error handlers
+      // Attach custom success and error handlers to the request
       if( form.length ) {
-
-        var pluginInstance = $.data(document, pluginName + "-" + form.attr('data-formmerid'));
+        var $this = $.data(document, pluginName + "-" + form.attr('data-formmerid'));
 
         // If a success function exists, we need to check if it is already an array
         // of functions or a single function
         if( options.hasOwnProperty('success') ) {
-          console.log("has success");
           if( options.success.constructor === Array ) {
-            console.log("adding to array");
             options.success.push( function() { 
-              console.log("using instance");
-              pluginInstance.enableSubmission(false);
+              $this.enableSubmission(false);
             });
           } else {
-            console.log("not adding to array", options);
-            console.log("the type is", options.success.constructor);
             options.success = [ options.success, function() {
-              pluginInstance.enableSubmission(false);
+              $this.enableSubmission(false);
             }];
           }
         } else {
           options.success = function() {
-            enableSubmission(form, false);
+            $this.enableSubmission(false);
           };
         }
 
         if( options.hasOwnProperty('error') ) {
           if( options.error.constructor === Array ) {
             options.error.push( function() { 
-              enableSubmission(form, true);
+              $this.enableSubmission(true);
             });
           } else {
             options.error = [ options.error, function() {
-              enableSubmission(form, true);
+              $this.enableSubmission(true);
             }];
           }
         } else { 
           options.error = function() {
-            enableSubmission(form, true);
+            $this.enableSubmission(true);
           }
         }
       }
-
-      
     });
 }( jQuery, window, document ));

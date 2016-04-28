@@ -31,14 +31,14 @@
         });
 
         // Demo needs to be successful and enableOnSuccess has to be true and submission must have success
-        var test = $("#form-test").formmer({
+        $("#form-test").formmer({
           enableOnSuccess: true,
           watchURL: '../examples/response/json.php',
+          disableFormInputs: true,
           enabledCallback: function(form, button) {
-            $(button).text( $(button).text() + " butts" );
+            $("#form-test").formmer('disableFormButton');
           }
         });
-
       });
     </script>
   </body>
