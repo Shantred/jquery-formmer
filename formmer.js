@@ -1,5 +1,5 @@
 /**
- * Formmer v0.3
+ * Formmer v1.0
  * Eric South - https://github.com/Shantred/jquery-formmer
  * Prevents duplicate submissions of a form by disabling form submission once the 
  * submit event has fired. Formmer also watches jQuery ajax requests and will
@@ -46,7 +46,6 @@
 
     $.extend( Plugin.prototype, {
       init: function() {
-        console.log("Plugin init called on", this);
         this.bindFormSubmission( this.element );
         this.getDataSettings( this.element );
       },
@@ -67,7 +66,6 @@
             return false;
           }
 
-          //console.log("this inside the bind", e.data.plugin);
           e.data.formmer.disableSubmission();
           return false;
         });
@@ -231,10 +229,6 @@
     // Ajax prefilter that communicates with plugin instances to enable and disable
     // form/button controls.
     $.ajaxPrefilter( function( options, originalOptions, jqXHR) {
-
-      // console.log("options:", options);
-      // console.log("originalOptions:", originalOptions);
-      // console.log("jaXHR:", jqXHR);
 
       // To prevent issues if the action attribute is used for something else,
       // look for the watch url first and use action url as backup
