@@ -14,7 +14,7 @@
           enableOnSucces: false,
           watchURL: null,
           disableFormInputs: false,
-          ignoreAjax: false,
+          disableAjax: false,
           enabledCallback: null,
           disabledCallback: null,
           ajaxOnSuccess: null,
@@ -28,7 +28,6 @@
       // is passed in as a string for the options param. If not a string, assume
       // it is an object containing plugin options
 
-      // Always have reference to the intializing object
       this.element = element;
       this.settings = $.extend( {}, defaults, options );
       this._defaults = defaults;
@@ -50,7 +49,6 @@
         console.log("Plugin init called on", this);
         this.bindFormSubmission( this.element );
         this.getDataSettings( this.element );
-        this.addDataAttributes( this.element );
       },
       bindFormSubmission: function( form ) {
 
@@ -87,12 +85,17 @@
             this.settings.enableOnError = false;
         }
 
-        if( this.element[0].hasAttribute('data-watchurl') )
+        // If a watchURL was provided as data, set to settings. Otherwise, check
+        // if one was provided via options and add that to data
+        if( this.element[0].hasAttribute('data-watchurl') ) {
           this.settings.watchURL = this.element.attr('data-watchurl');
+        } else if( this.settings.watchURL ) {
+          this.element.attr('data-watchurl', this.settings.watchURL);
+        }
 
-        if( this.element[0].hasAttribute('data-ignoreajax') ) {
-          if( this.element.attr('data-ignoreajax').toLowerCase() === "true" )
-            this.settings.ignoreAjax = true;
+        if( this.element[0].hasAttribute('data-disableajax') ) {
+          if( this.element.attr('data-disableajax').toLowerCase() === "true" )
+            this.settings.disableAjax = true;
         }
 
         if( this.element[0].hasAttribute('data-disableforminputs') ) {
@@ -100,39 +103,22 @@
             this.settings.disableFormInputs = true;
         }
       },
-      addDataAttributes: function() {
-
-        // We read all boolean and string settings from data attributes, so if
-        // they are not already defined, define them. 
-        if( !this.element[0].hasAttribute('data-enableonsuccess') )
-          this.element.attr('data-enableonsuccess', this.settings.enableOnSuccess);
-
-        if( !this.element[0].hasAttribute('data-enableonerror') )
-          this.element.attr('data-enableonerror', this.settings.enableOnError);
-
-        if( !this.element[0].hasAttribute('data-watchurl') && this.settings.watchURL )
-          this.element.attr('data-watchurl', this.settings.watchURL);
-
-        if( !this.element[0].hasAttribute('data-ignoreajax') )
-          this.element.attr('data-ignoreajax', this.settings.ignoreAjax);
-      },
       enableSubmission: function( isError ) {
 
         // Check correct data attr depending on error value
         if( isError ) {
 
           // By default, buttons should enable after an error
-          if( $(this.element).attr('data-enableonerror') ) {
-            if( $(this.element).attr('data-enableonerror') == "true") {
+          if( this.settings.enableOnError === true ) {
 
-              // Enable all form inputs if specified
-              if( this.settings.disableFormInputs === true ) {
-                $(this.element).children('input, textarea, select').prop('disabled', false);
-              }
-
-              $(this.element).removeClass('formmer-processing');
-              this.enableFormButton();
+            // Enable all form inputs if specified
+            if( this.settings.disableFormInputs === true ) {
+              $(this.element).children('input, textarea, select').prop('disabled', false);
             }
+
+            $(this.element).removeClass('formmer-processing');
+            this.enableFormButton();
+
           } else {
           
             // Not specified, default to enabled
@@ -151,17 +137,15 @@
         } else {
 
           // By default, buttons don't enable after success
-          if( $(this.element).attr('data-enableonsuccess') ) {
-            if( $(this.element).attr('data-enableonsuccess') === "true" ) {
+          if( this.settings.enableOnSuccess === true ) {
 
-              // Enable all form inputs if specified
-              if( this.settings.disableFormInputs === true ) {
-                $(this.element).children('input, textarea, select').prop('disabled', false);
-              }
-
-              $(this.element).removeClass('formmer-processing');
-              this.enableFormButton();
+            // Enable all form inputs if specified
+            if( this.settings.disableFormInputs === true ) {
+              $(this.element).children('input, textarea, select').prop('disabled', false);
             }
+
+            $(this.element).removeClass('formmer-processing');
+            this.enableFormButton();
           } // No else because of defaults
         
           if( this.settings.ajaxOnSuccess )
@@ -254,10 +238,10 @@
 
       // To prevent issues if the action attribute is used for something else,
       // look for the watch url first and use action url as backup
-      var form = $("form.formmer[data-watchurl='" + options.url + "'][data-ignoreajax=false]");
+      var form = $("form.formmer[data-watchurl='" + options.url + "']:not([data-disableajax=true])");
 
       if( form.length === 0 ) {
-        form = $("form.formmer[action='" + options.url + "'][data-ignoreajax=false]");
+        form = $("form.formmer[action='" + options.url + "']:not([data-disableajax=true])");
       }
 
       // Attach custom success and error handlers to the request

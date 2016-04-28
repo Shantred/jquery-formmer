@@ -36,6 +36,7 @@
           watchURL: '../examples/response/json.php',
           disableFormInputs: true,
           enabledCallback: function(form, button) {
+            console.log('enabled');
             $("#form-test").formmer('disableFormButton');
           }
         });
